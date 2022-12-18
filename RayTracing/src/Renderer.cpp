@@ -48,7 +48,7 @@ void Renderer::Render(const RenderScene& scene, const Camera& camera)
 	m_ActiveCamera = &camera;
 
 	//std::thread::hardware_concurrency();
-#define MULTI_THREADED 0
+#define MULTI_THREADED 1
 #if MULTI_THREADED
 	std::for_each(std::execution::par, m_ImageVerticalIter.begin(), m_ImageVerticalIter.end(),
 		[&](uint32_t y)
@@ -56,8 +56,7 @@ void Renderer::Render(const RenderScene& scene, const Camera& camera)
 			std::for_each(std::execution::par, m_ImageHorizontalIter.begin(), m_ImageHorizontalIter.end(),
 			[&, y](uint32_t x)
 				{
-					ray.Direction = camera.GetRayDirections()[x + y * m_FinalImage->GetWidth()];
-					glm::vec4 color = TraceRay(scene, ray);
+					glm::vec4 color = PerPixel(x, y);
 					color = glm::clamp(color, glm::vec4(0.0f), glm::vec4(1.0f));
 					m_ImageData[x + y * m_FinalImage->GetWidth()] = Utils::ConvertToRGBA(color);
 				});
