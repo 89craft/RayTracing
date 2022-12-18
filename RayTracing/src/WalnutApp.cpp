@@ -6,7 +6,6 @@
 
 #include "Renderer.h"
 #include "Camera.h"
-#include "RenderScene.h"
 
 #include <glm/gtc/type_ptr.hpp>
 
@@ -28,22 +27,33 @@ public:
 
 		{
 			Sphere sphere;
-			sphere.Position = { 1.0f, 0.0f, -2.0f };
+			sphere.Position = { 1.0f, 0.0f, -1.0f };
 			sphere.Radius = 1.0f;
 			sphere.MaterialIndex = 1;
 			m_RenderScene.Spheres.push_back(sphere);
 		}
 
 		{
-			Material material;
-			material.Albedo = { 1.0f, 0.0f, 0.0f };
-			m_RenderScene.Materials.push_back(material);
+			Sphere sphere;
+			sphere.Position = { -2.0f, 0.0f, -2.0f };
+			sphere.Radius = 2.0f;
+			sphere.MaterialIndex = 2;
+			m_RenderScene.Spheres.push_back(sphere);
 		}
 
 		{
-			Material material;
+			Material& material = m_RenderScene.Materials.emplace_back();
+			material.Albedo = { 1.0f, 0.0f, 0.0f };
+		}
+
+		{
+			Material& material = m_RenderScene.Materials.emplace_back();
 			material.Albedo = { 0.0f, 1.0f, 0.0f };
-			m_RenderScene.Materials.push_back(material);
+		}
+
+		{
+			Material& material = m_RenderScene.Materials.emplace_back();
+			material.Albedo = { 0.0f, 0.0f, 1.0f };
 		}
 	}
 
@@ -69,7 +79,7 @@ public:
 			Sphere& sphere = m_RenderScene.Spheres[i];
 			ImGui::DragFloat3("Position", glm::value_ptr(sphere.Position), 0.1f);
 			ImGui::DragFloat("Radius", &sphere.Radius, 0.05f);
-			//ImGui::InputInt("Material Index", sphere.MaterialIndex, 1);
+			ImGui::DragInt("Material", &sphere.MaterialIndex, 1.0f, 0, (int)m_RenderScene.Materials.size() - 1);
 
 			ImGui::Separator();
 
@@ -81,7 +91,7 @@ public:
 			ImGui::PushID(i);
 
 			Material& material = m_RenderScene.Materials[i];
-			ImGui::DragFloat3("Albedo", glm::value_ptr(material.Albedo), 0.1f);
+			ImGui::ColorEdit3("Albedo", glm::value_ptr(material.Albedo));
 
 			ImGui::Separator();
 
@@ -137,9 +147,8 @@ Walnut::Application* Walnut::CreateApplication(int argc, char** argv)
 		if (ImGui::BeginMenu("File"))
 		{
 			if (ImGui::MenuItem("Exit"))
-			{
 				app->Close();
-			}
+
 			ImGui::EndMenu();
 		}
 	});

@@ -9,7 +9,7 @@ struct Sphere
 	glm::vec3 Position{ 0.0f };
 	float Radius = 0.5f;
 
-	uint32_t MaterialIndex = 0;
+	int MaterialIndex = 0;
 };
 
 struct Material
