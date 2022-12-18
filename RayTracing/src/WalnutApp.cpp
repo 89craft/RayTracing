@@ -6,6 +6,9 @@
 
 #include "Renderer.h"
 #include "Camera.h"
+#include "RenderScene.h"
+
+#include <glm/gtc/type_ptr.hpp>
 
 using namespace Walnut;
 
@@ -13,7 +16,36 @@ class ExampleLayer : public Walnut::Layer
 {
 public:
 	ExampleLayer()
-		: m_Camera(45.0f, 0.1f, 100.0f) {}
+		: m_Camera(45.0f, 0.1f, 100.0f)
+	{
+		{
+			Sphere sphere;
+			sphere.Position = { 0.0f, 0.0f, 0.0f };
+			sphere.Radius = 0.5f;
+			sphere.MaterialIndex = 0;
+			m_RenderScene.Spheres.push_back(sphere);
+		}
+
+		{
+			Sphere sphere;
+			sphere.Position = { 1.0f, 0.0f, -2.0f };
+			sphere.Radius = 1.0f;
+			sphere.MaterialIndex = 1;
+			m_RenderScene.Spheres.push_back(sphere);
+		}
+
+		{
+			Material material;
+			material.Albedo = { 1.0f, 0.0f, 0.0f };
+			m_RenderScene.Materials.push_back(material);
+		}
+
+		{
+			Material material;
+			material.Albedo = { 0.0f, 1.0f, 0.0f };
+			m_RenderScene.Materials.push_back(material);
+		}
+	}
 
 	virtual void OnUpdate(float ts) override
 	{
@@ -26,6 +58,34 @@ public:
 		if (ImGui::Button("Render"))
 		{
 			Render();
+		}
+		ImGui::End();
+
+		ImGui::Begin("Scene");
+		for (size_t i = 0; i < m_RenderScene.Spheres.size(); i++)
+		{
+			ImGui::PushID(i);
+
+			Sphere& sphere = m_RenderScene.Spheres[i];
+			ImGui::DragFloat3("Position", glm::value_ptr(sphere.Position), 0.1f);
+			ImGui::DragFloat("Radius", &sphere.Radius, 0.05f);
+			//ImGui::InputInt("Material Index", sphere.MaterialIndex, 1);
+
+			ImGui::Separator();
+
+			ImGui::PopID();
+		}
+
+		for (size_t i = 0; i < m_RenderScene.Materials.size(); i++)
+		{
+			ImGui::PushID(i);
+
+			Material& material = m_RenderScene.Materials[i];
+			ImGui::DragFloat3("Albedo", glm::value_ptr(material.Albedo), 0.1f);
+
+			ImGui::Separator();
+
+			ImGui::PopID();
 		}
 		ImGui::End();
 
@@ -52,13 +112,14 @@ public:
 
 		m_Renderer.OnResize(m_ViewportWidth, m_ViewportHeight);
 		m_Camera.OnResize(m_ViewportWidth, m_ViewportHeight);
-		m_Renderer.Render(m_Camera);
+		m_Renderer.Render(m_RenderScene, m_Camera);
 
 		m_LastRenderTime = timer.ElapsedMillis();
 	}
 private:
 	Renderer m_Renderer;
 	Camera m_Camera;
+	RenderScene m_RenderScene;
 	uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
 
 	float m_LastRenderTime = 0;
