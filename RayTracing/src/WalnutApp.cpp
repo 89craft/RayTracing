@@ -27,7 +27,7 @@ public:
 
 		{
 			Sphere sphere;
-			sphere.Position = { 1.0f, 0.0f, -1.0f };
+			sphere.Position = { 1.0f, 0.5f, -1.0f };
 			sphere.Radius = 1.0f;
 			sphere.MaterialIndex = 1;
 			m_RenderScene.Spheres.push_back(sphere);
@@ -35,8 +35,8 @@ public:
 
 		{
 			Sphere sphere;
-			sphere.Position = { -2.0f, 0.0f, -2.0f };
-			sphere.Radius = 2.0f;
+			sphere.Position = { 0.0f, -100.5f, 0.0f };
+			sphere.Radius = 100.0f;
 			sphere.MaterialIndex = 2;
 			m_RenderScene.Spheres.push_back(sphere);
 		}
