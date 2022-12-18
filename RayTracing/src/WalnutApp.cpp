@@ -2,14 +2,23 @@
 #include "Walnut/EntryPoint.h"
 
 #include "Walnut/Image.h"
-#include "Walnut/Random.h"
 #include "Walnut/Timer.h"
+
+#include "Renderer.h"
+#include "Camera.h"
 
 using namespace Walnut;
 
 class ExampleLayer : public Walnut::Layer
 {
 public:
+	ExampleLayer()
+		: m_Camera(45.0f, 0.1f, 100.0f) {}
+
+	virtual void OnUpdate(float ts) override
+	{
+		m_Camera.OnUpdate(ts);
+	}
 	virtual void OnUIRender() override
 	{
 		ImGui::Begin("Settings");
@@ -26,37 +35,30 @@ public:
 		m_ViewportWidth = ImGui::GetContentRegionAvail().x;
 		m_ViewportHeight = ImGui::GetContentRegionAvail().y;
 
-		if (m_Image)
-			ImGui::Image(m_Image->GetDescriptorSet(), { (float)m_Image->GetWidth(), (float)m_Image->GetHeight() });
+		auto image = m_Renderer.GetFinalImage();
+		if (image)
+			ImGui::Image(image->GetDescriptorSet(), { (float)image->GetWidth(), (float)image->GetHeight() },
+				ImVec2(0, 1), ImVec2(1, 0));
 
 		ImGui::End();
 		ImGui::PopStyleVar();
+
+		Render();
 	}
 
 	void Render()
 	{
 		Timer timer;
 
-		if (!m_Image || m_ViewportWidth != m_Image->GetWidth() || m_ViewportHeight != m_Image->GetHeight())
-		{
-			m_Image = std::make_shared<Image>(m_ViewportWidth, m_ViewportHeight, ImageFormat::RGBA);
-			delete[] m_ImageData;
-			m_ImageData = new uint32_t[m_ViewportWidth * m_ViewportHeight];
-		}
-
-		for (uint32_t i = 0; i < m_ViewportWidth * m_ViewportHeight; i++)
-		{
-			m_ImageData[i] = Random::UInt();
-			m_ImageData[i] |= 0xff000000;
-		}
-
-		m_Image->SetData(m_ImageData);
+		m_Renderer.OnResize(m_ViewportWidth, m_ViewportHeight);
+		m_Camera.OnResize(m_ViewportWidth, m_ViewportHeight);
+		m_Renderer.Render(m_Camera);
 
 		m_LastRenderTime = timer.ElapsedMillis();
 	}
 private:
-	std::shared_ptr<Image> m_Image;
-	uint32_t* m_ImageData = nullptr;
+	Renderer m_Renderer;
+	Camera m_Camera;
 	uint32_t m_ViewportWidth = 0, m_ViewportHeight = 0;
 
 	float m_LastRenderTime = 0;
