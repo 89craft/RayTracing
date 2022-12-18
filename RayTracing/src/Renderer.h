@@ -23,4 +23,6 @@ private:
 private:
 	std::shared_ptr<Walnut::Image> m_FinalImage;
 	uint32_t* m_ImageData = nullptr;
+
+	std::vector<uint32_t> m_ImageHorizontalIter, m_ImageVerticalIter;
 };

@@ -3,6 +3,8 @@
 #include "Renderer.h"
 #include "Camera.h"
 
+#include <execution>
+
 namespace Utils
 {
 	static uint32_t ConvertToRGBA(const glm::vec4& color)
@@ -34,6 +36,13 @@ void Renderer::OnResize(uint32_t width, uint32_t height)
 
 	delete[] m_ImageData;
 	m_ImageData = new uint32_t[width * height];
+
+	m_ImageHorizontalIter.resize(width);
+	m_ImageVerticalIter.resize(height);
+	for (uint32_t i = 0; i < width; i++)
+		m_ImageHorizontalIter[i] = i;
+	for (uint32_t i = 0; i < height; i++)
+		m_ImageVerticalIter[i] = i;
 }
 
 void Renderer::Render(const RenderScene& scene, const Camera& camera)
@@ -41,6 +50,22 @@ void Renderer::Render(const RenderScene& scene, const Camera& camera)
 	Ray ray;
 	ray.Origin = camera.GetPosition();
 
+	//std::thread::hardware_concurrency();
+#define MULTI_THREADED 0
+#if MULTI_THREADED
+	std::for_each(std::execution::par, m_ImageVerticalIter.begin(), m_ImageVerticalIter.end(),
+		[&](uint32_t y)
+		{
+			std::for_each(std::execution::par, m_ImageHorizontalIter.begin(), m_ImageHorizontalIter.end(),
+			[&, y](uint32_t x)
+				{
+					ray.Direction = camera.GetRayDirections()[x + y * m_FinalImage->GetWidth()];
+					glm::vec4 color = TraceRay(scene, ray);
+					color = glm::clamp(color, glm::vec4(0.0f), glm::vec4(1.0f));
+					m_ImageData[x + y * m_FinalImage->GetWidth()] = Utils::ConvertToRGBA(color);
+				});
+		});
+#else
 	for (uint32_t y = 0; y < m_FinalImage->GetHeight(); y++)
 	{
 		for (uint32_t x = 0; x < m_FinalImage->GetWidth(); x++)
@@ -51,6 +76,7 @@ void Renderer::Render(const RenderScene& scene, const Camera& camera)
 			m_ImageData[x + y * m_FinalImage->GetWidth()] = Utils::ConvertToRGBA(color);
 		}
 	}
+#endif
 
 	m_FinalImage->SetData(m_ImageData);
 }
