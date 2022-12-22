@@ -34,6 +34,9 @@ void Renderer::OnResize(uint32_t width, uint32_t height)
 	delete[] m_ImageData;
 	m_ImageData = new uint32_t[width * height];
 
+	delete[] m_AccumulationData;
+	m_AccumulationData = new glm::vec4[width * height];
+
 	m_ImageHorizontalIter.resize(width);
 	m_ImageVerticalIter.resize(height);
 	for (uint32_t i = 0; i < width; i++)
@@ -47,6 +50,9 @@ void Renderer::Render(const RenderScene& scene, const Camera& camera)
 	m_ActiveScene = &scene;
 	m_ActiveCamera = &camera;
 
+	if (m_FrameIndex == 1)
+		memset(m_AccumulationData, 0, m_FinalImage->GetWidth() * m_FinalImage->GetHeight() * sizeof(glm::vec4));
+
 	//std::thread::hardware_concurrency();
 #define MULTI_THREADED 1
 #if MULTI_THREADED
@@ -57,8 +63,13 @@ void Renderer::Render(const RenderScene& scene, const Camera& camera)
 			[&, y](uint32_t x)
 				{
 					glm::vec4 color = PerPixel(x, y);
-					color = glm::clamp(color, glm::vec4(0.0f), glm::vec4(1.0f));
-					m_ImageData[x + y * m_FinalImage->GetWidth()] = Utils::ConvertToRGBA(color);
+					m_AccumulationData[x + y * m_FinalImage->GetWidth()] += color;
+
+					glm::vec4 acculatedColor = m_AccumulationData[x + y * m_FinalImage->GetWidth()];
+					acculatedColor /= (float)m_FrameIndex;
+
+					acculatedColor = glm::clamp(acculatedColor, glm::vec4(0.0f), glm::vec4(1.0f));
+					m_ImageData[x + y * m_FinalImage->GetWidth()] = Utils::ConvertToRGBA(acculatedColor);
 				});
 		});
 #else
@@ -74,6 +85,11 @@ void Renderer::Render(const RenderScene& scene, const Camera& camera)
 #endif
 
 	m_FinalImage->SetData(m_ImageData);
+
+	if (m_Settings.Accumulate)
+		m_FrameIndex++;
+	else
+		m_FrameIndex = 1;
 }
 
 glm::vec4 Renderer::PerPixel(uint32_t x, uint32_t y)
@@ -85,13 +101,13 @@ glm::vec4 Renderer::PerPixel(uint32_t x, uint32_t y)
 	glm::vec3 color(0.0f);
 	float multiplier = 1.0f;
 
-	int bounces = 2;
+	int bounces = 5;
 	for (int i = 0; i < bounces; i++)
 	{
 		Renderer::HitPayload payload = TraceRay(ray);
 		if (payload.HitDistance < 0.0f)
 		{
-			glm::vec3 skyColor = glm::vec3(0.0f, 0.0f, 0.0f);
+			glm::vec3 skyColor = glm::vec3(0.48f, 0.51f, 0.60f);
 			color += skyColor * multiplier;
 			break;
 		}
@@ -108,7 +124,8 @@ glm::vec4 Renderer::PerPixel(uint32_t x, uint32_t y)
 
 		multiplier *= 0.5f;
 
-		ray.Direction = glm::reflect(ray.Direction, payload.WorldNormal);
+		ray.Direction = glm::reflect(ray.Direction, payload.WorldNormal +
+			m_ActiveScene->Materials[sphere.MaterialIndex].Roughness * Walnut::Random::Vec3(-0.5, 0.5f));
 		ray.Origin = payload.WorldPosition + ray.Direction * 0.0001f;
 	}
 

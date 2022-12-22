@@ -9,6 +9,8 @@
 
 #include <glm/gtc/type_ptr.hpp>
 
+#include <execution>
+
 using namespace Walnut;
 
 class ExampleLayer : public Walnut::Layer
@@ -43,60 +45,79 @@ public:
 
 		{
 			Material& material = m_RenderScene.Materials.emplace_back();
-			material.Albedo = { 1.0f, 0.0f, 0.0f };
+			material.Albedo = { 0.47f, 0.79f, 0.72f };
+			material.Roughness = 0.2f;
+			material.Metallic = 0.0f;
 		}
 
 		{
 			Material& material = m_RenderScene.Materials.emplace_back();
-			material.Albedo = { 0.0f, 1.0f, 0.0f };
+			material.Albedo = { 0.66f, 0.39f, 0.67f };
+			material.Roughness = 0.2f;
+			material.Metallic = 0.0f;
 		}
 
 		{
 			Material& material = m_RenderScene.Materials.emplace_back();
-			material.Albedo = { 0.0f, 0.0f, 1.0f };
+			material.Albedo = { 0.13f, 0.12f, 0.18f };
+			material.Roughness = 0.6f;
+			material.Metallic = 0.0f;
 		}
 	}
 
 	virtual void OnUpdate(float ts) override
 	{
-		m_Camera.OnUpdate(ts);
+		if (m_Camera.OnUpdate(ts))
+			m_Renderer.ResetFrameIndex();
 	}
 	virtual void OnUIRender() override
 	{
 		ImGui::Begin("Settings");
+		ImGui::Text("hardware_concurrency() = %d", std::thread::hardware_concurrency());
 		ImGui::Text("Last render: %.3fms", m_LastRenderTime);
 		if (ImGui::Button("Render"))
-		{
 			Render();
-		}
+
+		ImGui::Checkbox("Accumulate", &m_Renderer.GetSettings().Accumulate);
+
+		if (ImGui::Button("Reset"))
+			m_Renderer.ResetFrameIndex();
+
 		ImGui::End();
 
 		ImGui::Begin("Scene");
+		bool sceneChanged = false;
+
 		for (size_t i = 0; i < m_RenderScene.Spheres.size(); i++)
 		{
 			ImGui::PushID(i);
+			ImGui::Text("Sphere #%d", i);
 
 			Sphere& sphere = m_RenderScene.Spheres[i];
-			ImGui::DragFloat3("Position", glm::value_ptr(sphere.Position), 0.1f);
-			ImGui::DragFloat("Radius", &sphere.Radius, 0.05f);
-			ImGui::DragInt("Material", &sphere.MaterialIndex, 1.0f, 0, (int)m_RenderScene.Materials.size() - 1);
+			sceneChanged |= ImGui::DragFloat3("Position", glm::value_ptr(sphere.Position), 0.1f);
+			sceneChanged |= ImGui::DragFloat("Radius", &sphere.Radius, 0.05f);
+			sceneChanged |= ImGui::DragInt("Material", &sphere.MaterialIndex, 1.0f, 0, (int)m_RenderScene.Materials.size() - 1);
 
 			ImGui::Separator();
-
 			ImGui::PopID();
 		}
 
 		for (size_t i = 0; i < m_RenderScene.Materials.size(); i++)
 		{
 			ImGui::PushID(i);
+			ImGui::Text("Material #%d", i);
 
 			Material& material = m_RenderScene.Materials[i];
-			ImGui::ColorEdit3("Albedo", glm::value_ptr(material.Albedo));
+			sceneChanged |= ImGui::ColorEdit3("Albedo", glm::value_ptr(material.Albedo));
+			sceneChanged |= ImGui::DragFloat("Roughness", &material.Roughness, 0.05f, 0.0f, 1.0f);
+			sceneChanged |= ImGui::DragFloat("Metallic", &material.Metallic, 0.05f, 0.0f, 1.0f);
 
 			ImGui::Separator();
-
 			ImGui::PopID();
 		}
+
+		if (sceneChanged)
+			m_Renderer.ResetFrameIndex();
 		ImGui::End();
 
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
